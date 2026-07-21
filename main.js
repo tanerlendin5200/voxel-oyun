@@ -5,7 +5,7 @@
 // --- DEĞİŞKENLER ---
 let scene, camera, renderer, raycaster;
 let world = {};
-let playerPos = { x: 0, y: 20, z: 0 };
+let playerPos = { x: 0, y: 8, z: 0 };
 let playerRotX = 0, playerRotY = 0;
 let isLocked = false;
 let isMobile = false;
@@ -15,7 +15,8 @@ let seciliBlok = 1;
 let hareketEdiyor = { x: 0, y: 0, z: 0 };
 let zipliyor = false;
 let yGravity = 0;
-let yerde = false;
+let yerde = true;
+let gravityTimer = 0;
 let chunkGeo = {};
 let blockMeshes = {};
 let blockGroup;
@@ -200,12 +201,10 @@ function blokVarMi(x, y, z) {
 
 // --- ÇARPIŞMA ---
 function karakterCarpiyorMu(x, y, z) {
-  // Blok koordinatlarına çevir
   const bx = Math.floor(x);
   const by = Math.floor(y);
   const bz = Math.floor(z);
   
-  // Oyuncunun kapladığı blok alanı
   for (let ox = -1; ox <= 1; ox++) {
     for (let oz = -1; oz <= 1; oz++) {
       for (let oy = 0; oy <= 1; oy++) {
@@ -215,10 +214,11 @@ function karakterCarpiyorMu(x, y, z) {
           const blkY = by + oy;
           const blkZ = bz + oz;
           
-          // AABB çarpışma testi
-          if (x + 0.2 > blkX - 0.5 && x - 0.2 < blkX + 0.5 &&
-              y + 0.1 > blkY - 0.5 && y + 1.6 < blkY + 0.5 &&
-              z + 0.2 > blkZ - 0.5 && z - 0.2 < blkZ + 0.5) {
+          // AABB: oyuncu = 0.6x0.6 genişlik, 0.8 yükseklik
+          // blok = 1x1x1, kamera göz hizasında (y+0.5)
+          if (x + 0.3 > blkX - 0.5 && x - 0.3 < blkX + 0.5 &&
+              y + 0.8 > blkY - 0.5 && y - 0.5 < blkY + 0.5 &&
+              z + 0.3 > blkZ - 0.5 && z - 0.3 < blkZ + 0.5) {
             return true;
           }
         }
@@ -433,28 +433,38 @@ function loop() {
       }
     }
     
-    // Zıplama
-    if ((keys[' '] || zipliyor) && yerde) {
-      yGravity = 0.25;
-      yerde = false;
+    // === FİZİK (Yerçekimi + Zıplama) ===
+    if (yerde) {
+      yGravity = 0;
+      // Zıplama
+      if (keys[' '] || zipliyor) {
+        yGravity = 0.22;
+        yerde = false;
+      }
+    } else {
+      // Havada - yerçekimi uygula
+      yGravity -= 0.012;
+      const yeniY = camera.position.y + yGravity;
+      
+      if (!karakterCarpiyorMu(camera.position.x, yeniY, camera.position.z)) {
+        camera.position.y = yeniY;
+      } else {
+        // Bir bloğa çarptı
+        if (yGravity < 0) {
+          // Düşüyordu -> yere indi
+          camera.position.y = Math.floor(camera.position.y) + 0.6;
+          yGravity = 0;
+          yerde = true;
+        } else {
+          // Yükseliyordu -> kafasını vurdu
+          yGravity = 0;
+        }
+      }
     }
     
-    // Yerçekimi
-    yGravity -= 0.015;
-    const yeniY = camera.position.y + yGravity;
-    
-    if (!karakterCarpiyorMu(camera.position.x, yeniY, camera.position.z)) {
-      camera.position.y = yeniY;
-    } else {
-      if (yGravity < 0) {
-        // Yere indi
-        camera.position.y = Math.floor(yeniY) + 0.2;
-        yGravity = 0;
-        yerde = true;
-      } else {
-        // Kafasını vurdu
-        yGravity = -0.01;
-      }
+    // Başlangıçta zemine düş (spawn sonrası)
+    if (camera.position.y > 5 && !yerde) {
+      // Yüksekteyse normal fizik işlesin
     }
     
     // Oyuncu düşünce spawn
