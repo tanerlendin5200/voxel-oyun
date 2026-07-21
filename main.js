@@ -1,7 +1,6 @@
-/* =============================================
-   VoxelCraft - Ana Oyun Motoru
-   Three.js r128 ile voxel sandbox
-   ============================================= */
+/* ============================================
+   VoxelCraft v2 - Düzeltilmiş Fizik
+   ============================================ */
 
 // --- DEĞİŞKENLER ---
 let scene, camera, renderer, raycaster;
@@ -16,50 +15,43 @@ let seciliBlok = 1;
 let hareketEdiyor = { x: 0, y: 0, z: 0 };
 let zipliyor = false;
 let yGravity = 0;
-let yerde = true;
+let yerde = false;
 let chunkGeo = {};
 let blockMeshes = {};
 let blockGroup;
 
-// Blok tipleri: id -> { renk, isim }
+// Blok tipleri
 const BLOK_TIPLERI = {
-  1: { name: 'Toprak', color: 0x8B4513, emoji: '🟫' },
-  2: { name: 'Çimen', color: 0x4a7023, emoji: '🟩' },
-  3: { name: 'Taş', color: 0x808080, emoji: '⬜' },
-  4: { name: 'Odun', color: 0xC19A6B, emoji: '🟨' },
-  5: { name: 'Kömür', color: 0x2c2c2c, emoji: '⬛' },
-  6: { name: 'Kum', color: 0xf5f5dc, emoji: '⬜' },
+  1: { name: 'Toprak', color: 0x8B4513 },
+  2: { name: 'Çimen', color: 0x4a7023 },
+  3: { name: 'Taş', color: 0x808080 },
+  4: { name: 'Odun', color: 0xC19A6B },
+  5: { name: 'Kömür', color: 0x2c2c2c },
+  6: { name: 'Kum', color: 0xf5f5dc },
 };
 
-// Bir blok için geometri oluştur
-const blokBoyut = 0.8;
-const blokGeo = new THREE.BoxGeometry(blokBoyut * 0.97, blokBoyut * 0.97, blokBoyut * 0.97);
+const blokBoyut = 1;
+const blokGeo = new THREE.BoxGeometry(0.95, 0.95, 0.95);
 
-// --- AYARLAR ---
 const renderMesafesi = 8;
-const dünyaBoyu = 30;
 
 // --- BAŞLAT ---
 function baslat() {
   document.getElementById('info').style.display = 'none';
   document.getElementById('ui').style.display = 'block';
   
-  // Mobil tespit
   isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   if (isMobile) {
     document.getElementById('mobilKontroller').style.display = 'flex';
   }
 
-  // Scene
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87CEEB);
   scene.fog = new THREE.Fog(0x87CEEB, 25, 40);
 
-  // Camera
-  camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 50);
-  camera.position.set(playerPos.x, playerPos.y - 0.5, playerPos.z);
+  camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 50);
+  camera.position.set(playerPos.x, playerPos.y, playerPos.z);
 
-  // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -89,88 +81,83 @@ function baslat() {
   fillLight.position.set(-10, 10, -10);
   scene.add(fillLight);
 
-  // Dünya
   blockGroup = new THREE.Group();
   scene.add(blockGroup);
   
   dünyaOlustur();
 
-  // Raycaster
   raycaster = new THREE.Raycaster();
   raycaster.far = 7;
 
-  // Kontroller
   setupKontroller();
   setupMouse();
   setupMobile();
 
-  // Pencere yeniden boyutlandırma
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // Oyun döngüsü
   loop();
 }
 
-// --- DÜNYA OLUŞTUR ---
+// --- DÜNYA ---
 function dünyaOlustur() {
   for (let x = -renderMesafesi; x <= renderMesafesi; x++) {
     for (let z = -renderMesafesi; z <= renderMesafesi; z++) {
-      for (let y = 0; y <= 5; y++) {
+      // Yükseklik haritası (sin dalgası)
+      const yukseklik = 2 + Math.floor(
+        Math.sin(x * 0.4) * Math.cos(z * 0.4) * 1.5 +
+        Math.sin(x * 0.15 + z * 0.25) * 0.8
+      );
+      
+      for (let y = 0; y <= yukseklik; y++) {
         let blokTip = 0;
+        if (y === 0) blokTip = 5;
+        else if (y < yukseklik - 1) blokTip = 3;
+        else if (y === yukseklik - 1 && y > 2) blokTip = 1;
+        else blokTip = 2;
         
-        if (y === 0) blokTip = 5; // Kömür altı
-        else if (y === 1 || y === 2) blokTip = 3; // Taş
-        else if (y === 3) {
-          // Düz alan + tepecikler
-          const noise = Math.sin(x * 0.5) * Math.cos(z * 0.5) * 1.5 + Math.sin(x * 0.2 + z * 0.3) * 1;
-          if (y === 3 && noise > 0.5) blokTip = 1; // Tepe
-          else if (y === 3) blokTip = 2; // Çimen üst
-        }
-        else if (y === 4) {
-          const noise = Math.sin(x * 0.5) * Math.cos(z * 0.5) * 1.5 + Math.sin(x * 0.2 + z * 0.3) * 1;
-          if (noise > 1.2) blokTip = 1;
-        }
-        else if (y === 5) {
-          const noise = Math.sin(x * 0.5) * Math.cos(z * 0.5) * 1.5 + Math.sin(x * 0.2 + z * 0.3) * 1;
-          if (noise > 1.8) blokTip = 1;
-        }
-
-        if (blokTip > 0) {
-          blokEkle(x, y, z, blokTip, true);
-        }
+        blokEkle(x, y, z, blokTip, true);
       }
     }
   }
 
-  // Ağaçlar 
-  const ağaçlar = [
-    [-5, 3, -4], [4, 3, 5], [-3, 3, 6], [6, 3, -3], 
-    [0, 3, -7], [-7, 3, 2], [3, 3, -6], [-6, 3, -5]
+  // Ağaçlar
+  const agacKonumlari = [
+    [-5, 0, -4], [4, 0, 5], [-3, 0, 6], [6, 0, -3], 
+    [0, 0, -7], [-7, 0, 2], [3, 0, -6], [-6, 0, -5]
   ];
   
-  ağaçlar.forEach(pos => {
-    const [x, y, z] = pos;
-    // Gövde
-    for (let i = 0; i < 3; i++) {
-      blokEkle(x, y + i, z, 4, true); // Odun
+  agacKonumlari.forEach(pos => {
+    const [x, _, z] = pos;
+    // Zemin yüksekliğini bul
+    let yerY = 0;
+    for (let y = 10; y >= 0; y--) {
+      if (world[`${x},${y},${z}`] !== undefined) {
+        yerY = y + 1;
+        break;
+      }
     }
-    // Yapraklar
+    if (yerY <= 0 || yerY > 8) return;
+    
+    for (let i = 0; i < 4; i++) {
+      blokEkle(x, yerY + i, z, 4, true);
+    }
     for (let dx = -1; dx <= 1; dx++) {
       for (let dz = -1; dz <= 1; dz++) {
-        for (let dy = 2; dy <= 3; dy++) {
-          if (dx === 0 && dz === 0 && dy === 2) continue;
-          blokEkle(x + dx, y + dy, z + dz, 2, true);
+        for (let dy = 3; dy <= 4; dy++) {
+          if (dx === 0 && dz === 0 && dy === 3) continue;
+          if (world[`${x+dx},${yerY+dy},${z+dz}`] !== undefined) continue;
+          blokEkle(x + dx, yerY + dy, z + dz, 2, true);
         }
       }
     }
   });
 }
 
-// --- BLOK EKLE ---
+// --- BLOK İŞLEMLERİ ---
 function blokEkle(x, y, z, tip, meshEkle = true) {
   const key = `${x},${y},${z}`;
   world[key] = tip;
@@ -183,16 +170,6 @@ function blokEkle(x, y, z, tip, meshEkle = true) {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     
-    // Blok kenarları (daha Minecraft havası için)
-    const edges = new THREE.EdgesGeometry(blokGeo);
-    const edgeMat = new THREE.LineBasicMaterial({ 
-      color: 0x000000, 
-      transparent: true, 
-      opacity: 0.15 
-    });
-    const edgeLine = new THREE.LineSegments(edges, edgeMat);
-    mesh.add(edgeLine);
-    
     mesh.userData.isBlock = true;
     mesh.userData.pos = { x, y, z };
     mesh.userData.tip = tip;
@@ -202,7 +179,6 @@ function blokEkle(x, y, z, tip, meshEkle = true) {
   }
 }
 
-// --- BLOK SİL ---
 function blokSil(x, y, z) {
   const key = `${x},${y},${z}`;
   if (world[key] !== undefined) {
@@ -218,29 +194,31 @@ function blokSil(x, y, z) {
   return false;
 }
 
-// --- BLOK VAR MI ---
 function blokVarMi(x, y, z) {
   return world[`${x},${y},${z}`] !== undefined;
 }
 
-// --- KARAKTER POZİSYONUNDA BLOK VAR MI ---
-function karakterCarpiyorMu(px, py, pz) {
-  const cX = Math.round(px);
-  const cY = Math.floor(py);
-  const cZ = Math.round(pz);
+// --- ÇARPIŞMA ---
+function karakterCarpiyorMu(x, y, z) {
+  // Blok koordinatlarına çevir
+  const bx = Math.floor(x);
+  const by = Math.floor(y);
+  const bz = Math.floor(z);
   
-  for (let ix = -1; ix <= 1; ix++) {
-    for (let iy = -1; iy <= 1; iy++) {
-      for (let iz = -1; iz <= 1; iz++) {
-        const key = `${cX + ix},${cY + iy},${cZ + iz}`;
+  // Oyuncunun kapladığı blok alanı
+  for (let ox = -1; ox <= 1; ox++) {
+    for (let oz = -1; oz <= 1; oz++) {
+      for (let oy = 0; oy <= 1; oy++) {
+        const key = `${bx+ox},${by+oy},${bz+oz}`;
         if (world[key] !== undefined) {
-          const bx = cX + ix;
-          const by = cY + iy;
-          const bz = cZ + iz;
-          // Kaba hitbox kontrolü
-          if (px > bx - 0.6 && px < bx + 0.6 &&
-              py > by - 0.0 && py < by + 1.0 &&
-              pz > bz - 0.6 && pz < bz + 0.6) {
+          const blkX = bx + ox;
+          const blkY = by + oy;
+          const blkZ = bz + oz;
+          
+          // AABB çarpışma testi
+          if (x + 0.2 > blkX - 0.5 && x - 0.2 < blkX + 0.5 &&
+              y + 0.1 > blkY - 0.5 && y + 1.6 < blkY + 0.5 &&
+              z + 0.2 > blkZ - 0.5 && z - 0.2 < blkZ + 0.5) {
             return true;
           }
         }
@@ -264,7 +242,7 @@ function setupKontroller() {
 function setupMouse() {
   const canvas = renderer.domElement;
   
-  canvas.addEventListener('click', (e) => {
+  canvas.addEventListener('click', () => {
     if (!pointerLocked && !isMobile) {
       canvas.requestPointerLock();
     }
@@ -276,41 +254,29 @@ function setupMouse() {
   
   document.addEventListener('mousemove', (e) => {
     if (!pointerLocked || isMobile) return;
-    const sensitivity = 0.002;
-    playerRotY -= e.movementX * sensitivity;
-    playerRotX -= e.movementY * sensitivity;
-    playerRotX = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, playerRotX));
+    playerRotY -= e.movementX * 0.002;
+    playerRotX -= e.movementY * 0.002;
+    playerRotX = Math.max(-1.2, Math.min(1.2, playerRotX));
   });
 
-  // Sol tık - blok kır
   canvas.addEventListener('mousedown', (e) => {
-    if (e.button === 0 && pointerLocked) {
-      blokKirYap();
-    }
+    if (e.button === 0 && pointerLocked) blokKirYap();
   });
 
-  // Sağ tık - blok koy
   canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    if (pointerLocked) {
-      blokKoyYap();
-    }
+    if (pointerLocked) blokKoyYap();
   });
 }
 
-// --- MOBİL KONTROLLER ---
+// --- MOBİL ---
 function setupMobile() {
   if (!isMobile) return;
   
-  // Joystick
   const joypad = document.getElementById('joypad');
   const joyIcerik = document.getElementById('joy-icerik');
-  let joyTouching = false;
   
-  joypad.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    joyTouching = true;
-  }, { passive: false });
+  joypad.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
   
   joypad.addEventListener('touchmove', (e) => {
     e.preventDefault();
@@ -333,13 +299,11 @@ function setupMobile() {
   
   joypad.addEventListener('touchend', (e) => {
     e.preventDefault();
-    joyTouching = false;
     joyIcerik.style.transform = 'translate(-25px, -25px)';
     hareketEdiyor.x = 0;
     hareketEdiyor.z = 0;
   }, { passive: false });
 
-  // Zıpla
   document.getElementById('btn-zıpla').addEventListener('touchstart', (e) => {
     e.preventDefault();
     zipliyor = true;
@@ -349,14 +313,11 @@ function setupMobile() {
     zipliyor = false;
   }, { passive: false });
 
-  // Blok yerleştir
   document.getElementById('btn-yer').addEventListener('touchstart', (e) => {
     e.preventDefault();
     blokKoyYap();
   }, { passive: false });
 
-  // Blok seçimi (dokunarak)
-  // Ekrana tıkla - blok kır
   renderer.domElement.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1 && !e.target.closest('#mobilKontroller') && !e.target.closest('#blokSecim')) {
       const touch = e.touches[0];
@@ -364,15 +325,10 @@ function setupMobile() {
         (touch.clientX / window.innerWidth) * 2 - 1,
         -(touch.clientY / window.innerHeight) * 2 + 1
       );
-      
-      // Kısa süre sonra mı uzun basma mı?
-      setTimeout(() => {
-        blokKirYap(mouse);
-      }, 10);
+      setTimeout(() => blokKirYap(mouse), 10);
     }
   }, { passive: true });
 
-  // Blok seçici
   document.querySelectorAll('.blok-item').forEach(el => {
     el.addEventListener('click', () => {
       document.querySelectorAll('.blok-item').forEach(i => i.classList.remove('active'));
@@ -388,45 +344,37 @@ function setupMobile() {
   });
 }
 
-// --- BLOK KIR ---
+// --- BLOK KIR/KOY ---
 function blokKirYap(mousePos) {
   const center = mousePos || new THREE.Vector2(0, 0);
   raycaster.setFromCamera(center, camera);
-  
   const intersects = raycaster.intersectObjects(blockGroup.children, false);
-  
   for (const intersect of intersects) {
     const obj = intersect.object;
     if (obj.userData && obj.userData.isBlock) {
-      const { x, y, z } = obj.userData.pos;
-      blokSil(x, y, z);
+      blokSil(obj.userData.pos.x, obj.userData.pos.y, obj.userData.pos.z);
       return;
     }
   }
 }
 
-// --- BLOK KOY ---
 function blokKoyYap() {
   const center = new THREE.Vector2(0, 0);
   raycaster.setFromCamera(center, camera);
-  
   const intersects = raycaster.intersectObjects(blockGroup.children, false);
-  
   for (const intersect of intersects) {
     const obj = intersect.object;
     if (obj.userData && obj.userData.isBlock) {
       const { x, y, z } = obj.userData.pos;
       const normal = intersect.face.normal;
-      
       const nx = x + Math.round(normal.x);
       const ny = y + Math.round(normal.y);
       const nz = z + Math.round(normal.z);
       
-      // Karakterin üstüne koyma
-      const px = Math.round(camera.position.x);
+      // Karakterin üzerine koyma
+      const px = Math.floor(camera.position.x);
       const py = Math.floor(camera.position.y);
-      const pz = Math.round(camera.position.z);
-      
+      const pz = Math.floor(camera.position.z);
       if (nx === px && (ny === py || ny === py + 1) && nz === pz) return;
       if (blokVarMi(nx, ny, nz)) return;
       
@@ -441,13 +389,12 @@ function loop() {
   requestAnimationFrame(loop);
   
   if (pointerLocked || isMobile) {
-    // Hareket
-    let hiz = 0.12;
+    // Hareket girdisi
     let hx = 0, hz = 0;
     
     if (!isMobile) {
-      if (keys['w'] || keys['arrowup']) hz = 1;
-      if (keys['s'] || keys['arrowdown']) hz = -1;
+      if (keys['w'] || keys['arrowup']) hz = -1;
+      if (keys['s'] || keys['arrowdown']) hz = 1;
       if (keys['a'] || keys['arrowleft']) hx = -1;
       if (keys['d'] || keys['arrowright']) hx = 1;
     } else {
@@ -455,81 +402,75 @@ function loop() {
       hz = hareketEdiyor.z;
     }
     
-    // Hız normalize
-    if (Math.abs(hx) + Math.abs(hz) > 1) {
+    // Normalize
+    if (hx !== 0 || hz !== 0) {
       const len = Math.sqrt(hx*hx + hz*hz);
-      hx /= len;
-      hz /= len;
+      if (len > 1) { hx /= len; hz /= len; }
     }
     
-    // Kamera yönüne göre hareket
+    // Kamera yönü
     const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotY);
     const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotY);
     
+    const hiz = 0.1;
     let moveX = forward.x * hz + right.x * hx;
     let moveZ = forward.z * hz + right.z * hx;
     
-    // Çarpışma kontrolü - X ekseni
-    const newX = camera.position.x + moveX * hiz;
-    if (!karakterCarpiyorMu(newX, camera.position.y, camera.position.z)) {
-      camera.position.x = newX;
+    // X hareket + çarpışma
+    const ySimdiki = camera.position.y;
+    if (moveX !== 0) {
+      const yeniX = camera.position.x + moveX * hiz;
+      if (!karakterCarpiyorMu(yeniX, ySimdiki, camera.position.z)) {
+        camera.position.x = yeniX;
+      }
     }
     
-    // Çarpışma kontrolü - Z ekseni
-    const newZ = camera.position.z + moveZ * hiz;
-    if (!karakterCarpiyorMu(camera.position.x, camera.position.y, newZ)) {
-      camera.position.z = newZ;
+    // Z hareket + çarpışma
+    if (moveZ !== 0) {
+      const yeniZ = camera.position.z + moveZ * hiz;
+      if (!karakterCarpiyorMu(camera.position.x, ySimdiki, yeniZ)) {
+        camera.position.z = yeniZ;
+      }
     }
     
     // Zıplama
-    if ((keys[' '] || zipliyor) && yerde && !isMobile) {
-      yGravity = 0.2;
-      yerde = false;
-    }
-    if (zipliyor && yerde && isMobile) {
-      yGravity = 0.2;
+    if ((keys[' '] || zipliyor) && yerde) {
+      yGravity = 0.25;
       yerde = false;
     }
     
     // Yerçekimi
     yGravity -= 0.015;
-    const newY = camera.position.y + yGravity;
+    const yeniY = camera.position.y + yGravity;
     
-    if (!karakterCarpiyorMu(camera.position.x, newY, camera.position.z)) {
-      camera.position.y = newY;
-      yerde = false;
+    if (!karakterCarpiyorMu(camera.position.x, yeniY, camera.position.z)) {
+      camera.position.y = yeniY;
     } else {
       if (yGravity < 0) {
-        camera.position.y = Math.floor(camera.position.y) + 0.3;
+        // Yere indi
+        camera.position.y = Math.floor(yeniY) + 0.2;
+        yGravity = 0;
         yerde = true;
-        yGravity = 0;
       } else {
-        yGravity = 0;
+        // Kafasını vurdu
+        yGravity = -0.01;
       }
     }
     
-    // Oyuncu düşünce spawn'a geri dön
+    // Oyuncu düşünce spawn
     if (camera.position.y < -20) {
-      camera.position.set(0, 20, 0);
+      camera.position.set(0, 10, 0);
       yGravity = 0;
+      yerde = false;
     }
     
     // Kamera rotasyonu
-    const euler = new THREE.Euler(playerRotX, playerRotY, 0, 'YXZ');
-    camera.quaternion.setFromEuler(euler);
+    camera.quaternion.setFromEuler(new THREE.Euler(playerRotX, playerRotY, 0, 'YXZ'));
     
-    // Koordinat
+    // Koordinat göster
     document.getElementById('koordinat').textContent = 
       `${Math.round(camera.position.x)}, ${Math.floor(camera.position.y)}, ${Math.round(camera.position.z)}`;
   }
   
   renderer.render(scene, camera);
 }
-
-// --- İlk odak ---
-window.addEventListener('load', () => {
-  // Dünya yükleme göstergesi
-  setTimeout(() => {
-    document.getElementById('baslaBtn').textContent = '▶ OYUNU BAŞLAT';
-  }, 100);
-});
