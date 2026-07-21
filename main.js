@@ -31,7 +31,7 @@ function baslat(){
   isM=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   if(isM)document.getElementById('mobilKontroller').style.display='flex';
   S=new THREE.Scene();S.background=new THREE.Color(0x87CEEB);S.fog=new THREE.Fog(0x87CEEB,40,60);
-  C=new THREE.PerspectiveCamera(65,window.innerWidth/window.innerHeight,0.1,70);
+  C=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,70);
   R=new THREE.WebGLRenderer({antialias:false});R.setSize(window.innerWidth,window.innerHeight);R.setPixelRatio(1);
   R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(R.domElement);
   S.add(new THREE.AmbientLight(0x888888,0.6));const dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(15,25,15);dl.castShadow=true;dl.shadow.mapSize.width=512;dl.shadow.mapSize.height=512;S.add(dl);
@@ -79,7 +79,7 @@ function meshOlustur(){
 function blokV(x,y,z){return W[`${x},${y},${z}`]!==undefined;}
 function blokE(x,y,z,t){W[`${x},${y},${z}`]=t;meshOlustur();}
 function blokS(x,y,z){const k=`${x},${y},${z}`;if(W[k]===undefined)return false;delete W[k];meshOlustur();return true;}
-function altB(x,y,z){const ay=Math.floor(y);for(let o=-1;o<=1;o++)for(let p=-1;p<=1;p++)if(blokV(Math.floor(x)+o,ay,Math.floor(z)+p))return true;return false;}
+function altB(x,y,z){const ay=Math.floor(y-0.2);for(let o=-1;o<=1;o++)for(let p=-1;p<=1;p++)if(blokV(Math.floor(x)+o,ay,Math.floor(z)+p))return true;return false;}
 function carp(x,y,z){const bx=Math.floor(x),by=Math.floor(y),bz=Math.floor(z);for(let ox=-1;ox<=1;ox++)for(let oz=-1;oz<=1;oz++)for(let oy=0;oy<=1;oy++){if(!blokV(bx+ox,by+oy,bz+oz))continue;if(x+0.2>bx+ox-0.5&&x-0.2<bx+ox+0.5&&y+0.5>by+oy-0.5&&y-0.2<by+oy+0.5&&z+0.2>bz+oz-0.5&&z-0.2<bz+oz+0.5)return true;}return false;}
 function kntrl(){document.addEventListener('keydown',e=>{K[e.key.toLowerCase()]=true;if(e.key===' ')e.preventDefault();});document.addEventListener('keyup',e=>{K[e.key.toLowerCase()]=false;if(e.key===' ')hazir=true;});}
 function fare(){const c=R.domElement;c.addEventListener('click',()=>{if(!locked&&!isM)c.requestPointerLock();});document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===c;});document.addEventListener('mousemove',e=>{if(!locked||isM)return;pRotY-=e.movementX*0.003;pRotX+=e.movementY*0.003;pRotX=Math.max(-1.5,Math.min(1.5,pRotX));});c.addEventListener('mousedown',e=>{if(e.button===0&&locked)bkYap();if(e.button===2&&locked){bkKoy();e.preventDefault();}});c.addEventListener('contextmenu',e=>{e.preventDefault();});c.addEventListener('wheel',e=>{if(!locked)return;kms+=e.deltaY*0.01;kms=Math.max(2,Math.min(12,kms));e.preventDefault();},{passive:false});}
@@ -105,38 +105,34 @@ function loop(){
   if(mz!==0){const zn=sz+mz*spd;if(!carp(steve.position.x,sy,zn))steve.position.z=zn;}
   steve.rotation.y=pRotY;
   // MC BİREBİR FİZİK
-  // 1. Altında blok var mı?
-  const blokAltinda = altB(steve.position.x, steve.position.y - 0.01, steve.position.z);
+  // 1. Ayağın altında blok var mı? (hitbox alt sınırı y-0.2)
+  const blokAltinda = altB(steve.position.x, steve.position.y, steve.position.z);
   
   // 2. Yerdeyse gravity sıfırla
-  if (blokAltinda && g <= 0) {
+  if (blokAltinda) {
     yerde = true;
     g = 0;
+    // Yere oturt (küçük sapmaları düzelt)
+    steve.position.y = Math.floor(steve.position.y - 0.2) + 0.35;
     // Zıplama - sadece yeni basıldıysa
     if (hazir && (K[' '] || zpl)) {
-      g = 0.20;  // MC zıplama kuvveti
+      g = 0.18;
       yerde = false;
       hazir = false;
     }
   } else {
     yerde = false;
-    // Yerçekimi (MC: 0.08, biz 60fps'de 0.022)
-    g -= 0.022;
-    if (g < -0.28) g = -0.28; // Terminal velocity
-    
+    g -= 0.012;
+    if (g < -0.25) g = -0.25;
     const yeniY = steve.position.y + g;
-    
     if (!carp(steve.position.x, yeniY, steve.position.z)) {
       steve.position.y = yeniY;
     } else {
-      // Blokla çarpıştı
       if (g < 0) {
-        // Düşüyordu -> yere indi
         steve.position.y = Math.floor(yeniY) + 0.35;
         g = 0;
         yerde = true;
       } else {
-        // Yükseliyordu -> kafasını vurdu
         g = 0;
       }
     }
