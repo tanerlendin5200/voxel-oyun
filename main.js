@@ -416,10 +416,10 @@ function loop() {
   
   let hx = 0, hz = 0;
   if (!isMobile) {
-    if (keys['w']||keys['arrowup']) hz = 1;
-    if (keys['s']||keys['arrowdown']) hz = -1;
-    if (keys['a']||keys['arrowleft']) hx = -1;
-    if (keys['d']||keys['arrowright']) hx = 1;
+    if (keys['w']||keys['arrowup']) hz = -1;
+    if (keys['s']||keys['arrowdown']) hz = 1;
+    if (keys['a']||keys['arrowleft']) hx = 1;
+    if (keys['d']||keys['arrowright']) hx = -1;
   } else { hx = hareketEdiyor.x; hz = hareketEdiyor.z; }
   
   if (hx !== 0 || hz !== 0) { const l = Math.sqrt(hx*hx+hz*hz); if (l>1) { hx/=l; hz/=l; } }
@@ -434,11 +434,8 @@ function loop() {
   if (mx !== 0) { const xn = kx+mx*hiz; if (!karakterCarpiyorMu(xn, ky, kz)) kedi.position.x = xn; }
   if (mz !== 0) { const zn = kz+mz*hiz; if (!karakterCarpiyorMu(kedi.position.x, ky, zn)) kedi.position.z = zn; }
   
-  // Kediyi hareket yönüne çevir
-  if (mx !== 0 || mz !== 0) {
-    const hedefAci = Math.atan2(-mx, -mz);
-    kedi.rotation.y = hedefAci;
-  }
+  // Kedi DÖNMESİN - hep aynı yöne baksın
+  kedi.rotation.y = 0;
   
   // Fizik
   if (altindaBlokVarMi(kedi.position.x, kedi.position.y, kedi.position.z) && yGravity <= 0) {
