@@ -434,8 +434,8 @@ function loop() {
   if (mx !== 0) { const xn = kx+mx*hiz; if (!karakterCarpiyorMu(xn, ky, kz)) kedi.position.x = xn; }
   if (mz !== 0) { const zn = kz+mz*hiz; if (!karakterCarpiyorMu(kedi.position.x, ky, zn)) kedi.position.z = zn; }
   
-  // Kedi DÖNMESİN - hep aynı yöne baksın
-  kedi.rotation.y = 0;
+  // Kedi fareyle birlikte dönsün (akıcı)
+  kedi.rotation.y = playerRotY;
   
   // Fizik
   if (altindaBlokVarMi(kedi.position.x, kedi.position.y, kedi.position.z) && yGravity <= 0) {
