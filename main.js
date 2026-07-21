@@ -31,9 +31,9 @@ const BLOK_TIPLERI = {
   6: { name: 'Kum', color: 0xf5f5dc, emoji: '⬜' },
 };
 
-// Bir blok için geometri oluştur (biraz daha küçük ki ayrım belli olsun)
-const blokBoyut = 1;
-const blokGeo = new THREE.BoxGeometry(blokBoyut * 0.98, blokBoyut * 0.98, blokBoyut * 0.98);
+// Bir blok için geometri oluştur
+const blokBoyut = 0.8;
+const blokGeo = new THREE.BoxGeometry(blokBoyut * 0.97, blokBoyut * 0.97, blokBoyut * 0.97);
 
 // --- AYARLAR ---
 const renderMesafesi = 8;
@@ -56,8 +56,8 @@ function baslat() {
   scene.fog = new THREE.Fog(0x87CEEB, 25, 40);
 
   // Camera
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
-  camera.position.set(playerPos.x, playerPos.y, playerPos.z);
+  camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 50);
+  camera.position.set(playerPos.x, playerPos.y - 0.5, playerPos.z);
 
   // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -446,8 +446,8 @@ function loop() {
     let hx = 0, hz = 0;
     
     if (!isMobile) {
-      if (keys['w'] || keys['arrowup']) hz = -1;
-      if (keys['s'] || keys['arrowdown']) hz = 1;
+      if (keys['w'] || keys['arrowup']) hz = 1;
+      if (keys['s'] || keys['arrowdown']) hz = -1;
       if (keys['a'] || keys['arrowleft']) hx = -1;
       if (keys['d'] || keys['arrowright']) hx = 1;
     } else {
@@ -483,16 +483,16 @@ function loop() {
     
     // Zıplama
     if ((keys[' '] || zipliyor) && yerde && !isMobile) {
-      yGravity = 0.25;
+      yGravity = 0.2;
       yerde = false;
     }
     if (zipliyor && yerde && isMobile) {
-      yGravity = 0.25;
+      yGravity = 0.2;
       yerde = false;
     }
     
     // Yerçekimi
-    yGravity -= 0.012;
+    yGravity -= 0.015;
     const newY = camera.position.y + yGravity;
     
     if (!karakterCarpiyorMu(camera.position.x, newY, camera.position.z)) {
@@ -500,7 +500,7 @@ function loop() {
       yerde = false;
     } else {
       if (yGravity < 0) {
-        camera.position.y = Math.floor(camera.position.y) + 0.1;
+        camera.position.y = Math.floor(camera.position.y) + 0.3;
         yerde = true;
         yGravity = 0;
       } else {
