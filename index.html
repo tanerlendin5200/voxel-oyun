@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<title>VoxelCraft - Basit Sandbox</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="info">
+    <h1>🏗️ VoxelCraft</h1>
+    <p>Sol Tık / Dokun = Blok Kır  |  Sağ Tık / Uzun Bas = Blok Koy</p>
+    <p>WASD = Hareket  |  Space = Zıpla  |  Fare = Bakış</p>
+    <button id="baslaBtn" onclick="baslat()">▶ OYUNU BAŞLAT</button>
+  </div>
+
+  <div id="ui" style="display:none;">
+    <div id="blokSecim">
+      <div class="blok-item active" data-tip="1" style="background:#8B4513">🌲</div>
+      <div class="blok-item" data-tip="2" style="background:#4a7023">🌿</div>
+      <div class="blok-item" data-tip="3" style="background:#808080">🪨</div>
+      <div class="blok-item" data-tip="4" style="background:#C19A6B">🪵</div>
+      <div class="blok-item" data-tip="5" style="background:#2c2c2c">⚫</div>
+      <div class="blok-item" data-tip="6" style="background:#f5f5dc">⬜</div>
+    </div>
+    <div id="crosshair">+</div>
+    <div id="koordinat">0, 0, 0</div>
+  </div>
+
+  <div id="mobilKontroller" style="display:none;">
+    <div id="joypad">
+      <div id="joy-icerik"></div>
+    </div>
+    <div id="mobil-sag">
+      <button id="btn-zıpla" class="mobil-btn">⬆</button>
+      <button id="btn-yer" class="mobil-btn">⬇</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
