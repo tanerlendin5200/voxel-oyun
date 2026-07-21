@@ -1,5 +1,5 @@
 /* ============================================
-   VoxelCraft v3 - Düzeltilmiş Fizik + Zıplama
+   VoxelCraft v2 - Düzeltilmiş Fizik
    ============================================ */
 
 // --- DEĞİŞKENLER ---
@@ -11,11 +11,9 @@ let isLocked = false;
 let isMobile = false;
 let pointerLocked = false;
 let keys = {};
-let oncekiKeys = {};
 let seciliBlok = 1;
 let hareketEdiyor = { x: 0, y: 0, z: 0 };
 let zipliyor = false;
-let oncekiZipliyor = false;
 let yGravity = 0;
 let yerde = true;
 let gravityTimer = 0;
@@ -87,7 +85,7 @@ function baslat() {
   blockGroup = new THREE.Group();
   scene.add(blockGroup);
   
-  dunyaOlustur();
+  dünyaOlustur();
 
   raycaster = new THREE.Raycaster();
   raycaster.far = 7;
@@ -106,7 +104,7 @@ function baslat() {
 }
 
 // --- DÜNYA ---
-function dunyaOlustur() {
+function dünyaOlustur() {
   for (let x = -renderMesafesi; x <= renderMesafesi; x++) {
     for (let z = -renderMesafesi; z <= renderMesafesi; z++) {
       // Yükseklik haritası (sin dalgası)
@@ -395,8 +393,8 @@ function loop() {
     let hx = 0, hz = 0;
     
     if (!isMobile) {
-      if (keys['w'] || keys['arrowup']) hz = 1;
-      if (keys['s'] || keys['arrowdown']) hz = -1;
+      if (keys['w'] || keys['arrowup']) hz = -1;
+      if (keys['s'] || keys['arrowdown']) hz = 1;
       if (keys['a'] || keys['arrowleft']) hx = -1;
       if (keys['d'] || keys['arrowright']) hx = 1;
     } else {
@@ -436,20 +434,16 @@ function loop() {
     }
     
     // === FİZİK (Yerçekimi + Zıplama) ===
-    // Space'e yeni basıldı mı kontrolü (basılı tutunca tekrar zıplamasın)
-    const spaceBasildi = keys[' '] && !oncekiKeys[' '];
-    const mobilZiplaBasildi = zipliyor && !oncekiZipliyor;
-    
     if (yerde) {
       yGravity = 0;
-      // Sadece yeni basıldıysa zıpla
-      if (spaceBasildi || mobilZiplaBasildi) {
-        yGravity = 0.28;
+      // Zıplama
+      if (keys[' '] || zipliyor) {
+        yGravity = 0.22;
         yerde = false;
       }
     } else {
       // Havada - yerçekimi uygula
-      yGravity -= 0.015;
+      yGravity -= 0.012;
       const yeniY = camera.position.y + yGravity;
       
       if (!karakterCarpiyorMu(camera.position.x, yeniY, camera.position.z)) {
@@ -468,9 +462,10 @@ function loop() {
       }
     }
     
-    // Bir önceki frame'in key durumunu sakla (space basılı tutma kontrolü için)
-    oncekiKeys[' '] = keys[' '];
-    oncekiZipliyor = zipliyor;
+    // Başlangıçta zemine düş (spawn sonrası)
+    if (camera.position.y > 5 && !yerde) {
+      // Yüksekteyse normal fizik işlesin
+    }
     
     // Oyuncu düşünce spawn
     if (camera.position.y < -20) {
