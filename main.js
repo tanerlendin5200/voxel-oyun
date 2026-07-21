@@ -37,7 +37,9 @@ function baslat(){
   S.add(new THREE.AmbientLight(0x888888,0.6));const dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(15,25,15);dl.castShadow=true;dl.shadow.mapSize.width=512;dl.shadow.mapSize.height=512;S.add(dl);
   BG=new THREE.Group();S.add(BG);
   mcHarita();meshOlustur();
-  steve=steveOlustur();steve.position.set(0,4,0);S.add(steve);
+  // Spawn yüksekliğini bul (blok içinde kalmasın)
+  let spY=3;for(let y=10;y>=0;y--)if(blokV(0,y,0)){spY=y+2;break;}
+  steve=steveOlustur();steve.position.set(0,spY,0);S.add(steve);
   Rc=new THREE.Raycaster();Rc.far=7;
   kntrl();fare();mobil();
   window.addEventListener('resize',()=>{C.aspect=window.innerWidth/window.innerHeight;C.updateProjectionMatrix();R.setSize(window.innerWidth,window.innerHeight);});
@@ -113,7 +115,7 @@ function loop(){
     else{yer=false;g-=0.022;const yn=steve.position.y+g;
       if(!carp(steve.position.x,yn,steve.position.z))steve.position.y=yn;else g=0;}}
   // Düşünce spawn
-  if(steve.position.y<-30){let ey=0;for(let x=-2;x<=2;x++)for(let z=-2;z<=2;z++)for(let y=10;y>=0;y--)if(blokV(x,y,z)){ey=Math.max(ey,y+2);break;}steve.position.set(0,Math.max(ey,3),0);g=-0.01;yer=false;}
+  if(steve.position.y<-30){let ey=0;for(let x=-2;x<=2;x++)for(let z=-2;z<=2;z++)for(let y=10;y>=0;y--)if(blokV(x,y,z)){ey=Math.max(ey,y+2);break;}steve.position.set(0,Math.max(ey,4),0);g=-0.01;yer=false;}
   // 3. ŞAHIS KAMERA
   const kyt=2.5+pRotX*2,kx2=steve.position.x-Math.sin(pRotY)*kms,kz2=steve.position.z-Math.cos(pRotY)*kms;
   C.position.set(kx2,steve.position.y+kyt,kz2);C.lookAt(steve.position.x,steve.position.y+1,steve.position.z);
