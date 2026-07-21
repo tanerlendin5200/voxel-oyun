@@ -321,8 +321,8 @@ function loop() {
     const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotY);
     const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), playerRotY);
     
-    // YAVAŞ HIZ: 0.06 (eskiden 0.1'di)
-    const hiz = 0.06;
+    // ÇOK YAVAŞ HIZ: 0.035 (eskiden 0.1'di, v5'te 0.06'ydı)
+    const hiz = 0.035;
     let moveX = forward.x * hz + right.x * hx;
     let moveZ = forward.z * hz + right.z * hx;
     
@@ -354,8 +354,8 @@ function loop() {
       
       // Zıplama (ziplamayaHazir kontrolü ile - basılı tutunca 1 kere)
       if (ziplamayaHazir && (keys[' '] || zipliyor)) {
-        // YAVAŞ ZIPLAMA: 0.22 (eskiden 0.28'di)
-        yGravity = 0.22;
+        // YAVAŞ ZIPLAMA: 0.18 (eskiden 0.28'di)
+        yGravity = 0.18;
         yerde = false;
         ziplamayaHazir = false;
       }
