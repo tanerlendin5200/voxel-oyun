@@ -116,7 +116,7 @@ function baslat() {
   dunyaMeshOlustur();
 
   kedi = kediOlustur();
-  kedi.position.set(3, 5, 3);
+  kedi.position.set(3, 2, 3);
   scene.add(kedi);
 
   // Arabaları ekle
