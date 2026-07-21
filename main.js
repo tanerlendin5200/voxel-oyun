@@ -1,12 +1,12 @@
 /* ============================================
-   VoxelCraft v6 - YAĞ GİBİ OPTİMİZE
+   VoxelCraft v7 - KOMİK KEDİ + 3. ŞAHIS + YÜKSEK ZIPLAMA
    ============================================ */
 
 // --- DEĞİŞKENLER ---
 let scene, camera, renderer, raycaster;
 let world = {};
-let playerPos = { x: 0, y: 10, z: 0 };
-let playerRotX = 0, playerRotY = 0;
+let playerPos = { x: 0, y: 10, z: 6 };
+let playerRotY = 0;
 let isMobile = false;
 let pointerLocked = false;
 let keys = {};
@@ -17,8 +17,7 @@ let yGravity = 0;
 let yerde = false;
 let ziplamayaHazir = true;
 let blockGroup;
-let dunyaMesh = null; // Birleştirilmiş dünya meshi
-let tekBlokGeo = new THREE.BoxGeometry(0.75, 0.75, 0.75); // Raycast için küçük
+let kedi; // Kedi mesh
 
 const BLOK_TIPLERI = {
   1: { name: 'Toprak', color: 0x8B4513 },
@@ -30,6 +29,115 @@ const BLOK_TIPLERI = {
 };
 
 const renderMesafesi = 8;
+
+// --- KEDİ OLUŞTUR ---
+function kediOlustur() {
+  const grup = new THREE.Group();
+
+  // Gövde (turuncu kedi)
+  const govdeGeo = new THREE.BoxGeometry(0.8, 0.5, 1.2);
+  const govdeMat = new THREE.MeshLambertMaterial({ color: 0xff8c00 });
+  const govde = new THREE.Mesh(govdeGeo, govdeMat);
+  govde.position.y = 0.3;
+  grup.add(govde);
+
+  // Kafa
+  const kafaGeo = new THREE.BoxGeometry(0.7, 0.6, 0.6);
+  const kafaMat = new THREE.MeshLambertMaterial({ color: 0xff8c00 });
+  const kafa = new THREE.Mesh(kafaGeo, kafaMat);
+  kafa.position.set(0, 0.7, 0.7);
+  grup.add(kafa);
+
+  // Gözler (beyaz)
+  const gozMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  for (let side = -1; side <= 1; side += 2) {
+    const goz = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.1), gozMat);
+    goz.position.set(side * 0.25, 0.75, 0.95);
+    grup.add(goz);
+  }
+
+  // Göz bebekleri (siyah)
+  const bebekMat = new THREE.MeshLambertMaterial({ color: 0x000000 });
+  for (let side = -1; side <= 1; side += 2) {
+    const bebek = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.15, 0.12), bebekMat);
+    bebek.position.set(side * 0.25, 0.73, 1);
+    grup.add(bebek);
+  }
+
+  // Burun (pembe)
+  const burun = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.08), new THREE.MeshLambertMaterial({ color: 0xff69b4 }));
+  burun.position.set(0, 0.68, 1);
+  grup.add(burun);
+
+  // Ağız (çizgi)
+  const agiz = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.03, 0.05), new THREE.MeshLambertMaterial({ color: 0x000000 }));
+  agiz.position.set(0, 0.6, 1);
+  grup.add(agiz);
+
+  // Bıyıklar (ince çubuklar)
+  const biyikMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+  for (let side = -1; side <= 1; side += 2) {
+    for (let i = -1; i <= 1; i++) {
+      const biyik = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.02), biyikMat);
+      biyik.position.set(side * 0.45, 0.65 + i * 0.05, 0.95);
+      biyik.rotation.z = side * (0.1 + i * 0.1);
+      grup.add(biyik);
+    }
+  }
+
+  // Kulaklar (üçgen - box ile taklit)
+  const kulakMat = new THREE.MeshLambertMaterial({ color: 0xff8c00 });
+  for (let side = -1; side <= 1; side += 2) {
+    const kulak = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 0.12), kulakMat);
+    kulak.position.set(side * 0.32, 0.95, 0.65);
+    kulak.rotation.z = side * 0.3;
+    grup.add(kulak);
+    // İç kulak (pembe)
+    const icKulak = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.13), new THREE.MeshLambertMaterial({ color: 0xffb6c1 }));
+    icKulak.position.set(side * 0.32, 0.9, 0.65);
+    icKulak.rotation.z = side * 0.3;
+    grup.add(icKulak);
+  }
+
+  // Ön bacaklar
+  const bacakMat = new THREE.MeshLambertMaterial({ color: 0xff8c00 });
+  for (let side = -1; side <= 1; side += 2) {
+    const bacak = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.4, 0.15), bacakMat);
+    bacak.position.set(side * 0.3, -0.1, 0.4);
+    grup.add(bacak);
+  }
+
+  // Arka bacaklar
+  for (let side = -1; side <= 1; side += 2) {
+    const bacak = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.45, 0.18), bacakMat);
+    bacak.position.set(side * 0.3, -0.05, -0.4);
+    grup.add(bacak);
+  }
+
+  // Kuyruk (yukarı kalkık)
+  const kuyrukMat = new THREE.MeshLambertMaterial({ color: 0xe67600 });
+  const kuyruk = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08), kuyrukMat);
+  kuyruk.position.set(0, 0.45, -0.7);
+  kuyruk.rotation.x = 0.4;
+  grup.add(kuyruk);
+
+  // Kuyruk ucu
+  const kuyrukUcu = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), new THREE.MeshLambertMaterial({ color: 0xffa500 }));
+  kuyrukUcu.position.set(0, 0.65, -0.85);
+  grup.add(kuyrukUcu);
+
+  // Çizgiler (sırt)
+  const cizgiMat = new THREE.MeshLambertMaterial({ color: 0xcc6600 });
+  for (let i = -1; i <= 1; i++) {
+    const cizgi = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.08, 0.3), cizgiMat);
+    cizgi.position.set(i * 0.2, 0.5, 0);
+    grup.add(cizgi);
+  }
+
+  grup.position.y = 0.35;
+  grup.castShadow = true;
+  return grup;
+}
 
 // --- BAŞLAT ---
 function baslat() {
@@ -43,27 +151,36 @@ function baslat() {
   scene.background = new THREE.Color(0x87CEEB);
   scene.fog = new THREE.Fog(0x87CEEB, 30, 45);
 
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
-  camera.position.set(playerPos.x, playerPos.y, playerPos.z);
+  // KAMERA - 3. ŞAHIS (kedinin arkasından)
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 50);
 
-  // OPTİMİZE RENDERER - gölge yok, pixel ratio 1
+  // Renderer - optimize
   renderer = new THREE.WebGLRenderer({ antialias: false });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(1);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  // Basit ışık - gölge yok
-  scene.add(new THREE.AmbientLight(0x888888, 0.7));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+  // Işık
+  scene.add(new THREE.AmbientLight(0x999999, 0.6));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
   dirLight.position.set(5, 15, 8);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.width = 512;
+  dirLight.shadow.mapSize.height = 512;
   scene.add(dirLight);
-  scene.add(new THREE.DirectionalLight(0x8888ff, 0.3).position.set(-5, 5, -5));
 
   blockGroup = new THREE.Group();
   scene.add(blockGroup);
   
   dunyaOlustur();
-  dunyaMeshOlustur(); // Tüm blokları tek meshe çevir
+  dunyaMeshOlustur();
+
+  // KEDİYİ EKLE
+  kedi = kediOlustur();
+  kedi.position.set(playerPos.x, playerPos.y, playerPos.z);
+  scene.add(kedi);
 
   raycaster = new THREE.Raycaster();
   raycaster.far = 7;
@@ -102,7 +219,6 @@ function dunyaOlustur() {
       }
     }
   }
-  // Ağaçlar
   [[-5,0,-4],[4,0,5],[-3,0,6],[6,0,-3],[0,0,-7],[-7,0,2],[3,0,-6],[-6,0,-5]].forEach(([x,_,z]) => {
     let yerY = 0;
     for (let y = 10; y >= 0; y--) { if (world[`${x},${y},${z}`] !== undefined) { yerY = y + 1; break; } }
@@ -116,204 +232,95 @@ function dunyaOlustur() {
   });
 }
 
-// TÜM BLOKLARI TEK MESH'TE BİRLEŞTİR
 function dunyaMeshOlustur() {
-  if (dunyaMesh) { blockGroup.remove(dunyaMesh); dunyaMesh.geometry.dispose(); dunyaMesh.material.dispose(); }
-  
-  const groups = {};
-  for (const key in world) {
-    const tip = world[key];
-    if (!groups[tip]) groups[tip] = [];
-    const [x, y, z] = key.split(',').map(Number);
-    // Görünmeyen yüzleri atla - eğer 6 yüzü de kapalıysa bloku ekleme
-    if (blokGizliMi(x, y, z)) continue;
-    groups[tip].push({ x, y, z });
-  }
-  
-  const materyaller = {};
-  for (const tip in groups) {
-    const renk = BLOK_TIPLERI[tip]?.color || 0x888888;
-    materyaller[tip] = new THREE.MeshLambertMaterial({ color: renk });
-  }
-  
-  // Her blok tipi için ayrı merged mesh
-  const meshParcalari = [];
-  for (const tip in groups) {
-    const positions = groups[tip];
-    if (positions.length === 0) continue;
-    
-    // Sadece görünen yüzleri olan bloklar için mesh oluştur
-    const geo = new THREE.BoxGeometry(1, 1, 1);
-    const mat = materyaller[tip];
-    
-    for (const pos of positions) {
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(pos.x, pos.y, pos.z);
-      mesh.updateMatrix();
-      meshParcalari.push(mesh);
-    }
-    
-    geo.dispose(); // Her blok için ayrı geo kullanma, referans al
-  }
-  
-  // Tüm mesh'leri birleştir
-  if (meshParcalari.length > 0) {
-    const merged = THREE.BufferGeometryUtils ? null : null;
-    
-    // Eğer BufferGeometryUtils varsa kullan, yoksa her tip için ayrı merged
-    if (typeof THREE.BufferGeometryUtils !== 'undefined' && THREE.BufferGeometryUtils.mergeGeometries) {
-      const geos = meshParcalari.map(m => {
-        m.updateMatrix();
-        const g = m.geometry.clone();
-        g.applyMatrix4(m.matrix);
-        return g;
-      });
-      const mergedGeo = THREE.BufferGeometryUtils.mergeGeometries(geos, false);
-      const mergedMat = new THREE.MeshLambertMaterial({ color: 0x8B7355 }); // Varsayılan renk
-      dunyaMesh = new THREE.Mesh(mergedGeo, mergedMat);
-      dunyaMesh.userData.isDunya = true;
-      blockGroup.add(dunyaMesh);
-      geos.forEach(g => g.dispose());
-    } else {
-      // Fallback: her tip için ayrı mesh (yine de her blok ayrı olmaktan iyi)
-      for (const tip in groups) {
-        const bloklar = groups[tip];
-        if (bloklar.length === 0) continue;
-        
-        const geo = new THREE.BoxGeometry(1, 1, 1);
-        const mat = materyaller[tip];
-        const tempGroup = new THREE.Group();
-        
-        for (const pos of bloklar) {
-          const m = new THREE.Mesh(geo, mat);
-          m.position.set(pos.x, pos.y, pos.z);
-          m.updateMatrix();
-          tempGroup.add(m);
-        }
-        
-        // Tek seferde birleştir
-        const positions_array = [];
-        const normals_array = [];
-        const uvs_array = [];
-        const indices_array = [];
-        let offset = 0;
-        
-        for (const pos of bloklar) {
-          // 6 yüz * 4 vertex = 24 vertex
-          const [px, py, pz] = [pos.x, pos.y, pos.z];
-          const half = 0.5;
-          
-          // Ön yüz
-          const v = [
-            [-half+px, -half+py,  half+pz], [ half+px, -half+py,  half+pz], [ half+px,  half+py,  half+pz], [-half+px,  half+py,  half+pz]
-          ];
-          const idx = offset;
-          v.forEach(p => { positions_array.push(...p); normals_array.push(0,0,1); uvs_array.push(0,0); });
-          indices_array.push(idx, idx+1, idx+2, idx, idx+2, idx+3);
-          offset += 4;
-          
-          // Arka yüz
-          v.forEach((_,i) => {
-            const p = [[ half+px, -half+py, -half+pz], [-half+px, -half+py, -half+pz], [-half+px,  half+py, -half+pz], [ half+px,  half+py, -half+pz]][i];
-            positions_array.push(...p); normals_array.push(0,0,-1); uvs_array.push(0,0);
-          });
-          indices_array.push(offset, offset+1, offset+2, offset, offset+2, offset+3);
-          offset += 4;
-          
-          // Üst yüz
-          v.forEach((_,i) => {
-            const p = [[-half+px,  half+py,  half+pz], [ half+px,  half+py,  half+pz], [ half+px,  half+py, -half+pz], [-half+px,  half+py, -half+pz]][i];
-            positions_array.push(...p); normals_array.push(0,1,0); uvs_array.push(0,0);
-          });
-          indices_array.push(offset, offset+1, offset+2, offset, offset+2, offset+3);
-          offset += 4;
-          
-          // Alt yüz
-          v.forEach((_,i) => {
-            const p = [[-half+px, -half+py, -half+pz], [ half+px, -half+py, -half+pz], [ half+px, -half+py,  half+pz], [-half+px, -half+py,  half+pz]][i];
-            positions_array.push(...p); normals_array.push(0,-1,0); uvs_array.push(0,0);
-          });
-          indices_array.push(offset, offset+1, offset+2, offset, offset+2, offset+3);
-          offset += 4;
-          
-          // Sağ yüz
-          v.forEach((_,i) => {
-            const p = [[ half+px, -half+py,  half+pz], [ half+px, -half+py, -half+pz], [ half+px,  half+py, -half+pz], [ half+px,  half+py,  half+pz]][i];
-            positions_array.push(...p); normals_array.push(1,0,0); uvs_array.push(0,0);
-          });
-          indices_array.push(offset, offset+1, offset+2, offset, offset+2, offset+3);
-          offset += 4;
-          
-          // Sol yüz
-          v.forEach((_,i) => {
-            const p = [[-half+px, -half+py, -half+pz], [-half+px, -half+py,  half+pz], [-half+px,  half+py,  half+pz], [-half+px,  half+py, -half+pz]][i];
-            positions_array.push(...p); normals_array.push(-1,0,0); uvs_array.push(0,0);
-          });
-          indices_array.push(offset, offset+1, offset+2, offset, offset+2, offset+3);
-          offset += 4;
-        }
-        
-        const mergedGeo = new THREE.BufferGeometry();
-        mergedGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions_array, 3));
-        mergedGeo.setAttribute('normal', new THREE.Float32BufferAttribute(normals_array, 3));
-        mergedGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs_array, 2));
-        mergedGeo.setIndex(indices_array);
-        mergedGeo.computeVertexNormals();
-        
-        const mergedMesh = new THREE.Mesh(mergedGeo, mat);
-        mergedMesh.userData.isDunya = true;
-        mergedMesh.userData.blokTipi = parseInt(tip);
-        blockGroup.add(mergedMesh);
-      }
-    }
-  }
-  
-  // Blok kırma/koyma için görünmez hitbox mesh'leri oluştur (sadece raycast için)
-  // Bunları küçük ve basit tut
+  blockGroup.children.forEach(c => { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+  blockGroup.clear();
+
+  const dummyMat = new THREE.MeshBasicMaterial({ visible: false });
   for (const key in world) {
     const [x, y, z] = key.split(',').map(Number);
     const tip = world[key];
-    const goster = new THREE.BoxGeometry(1, 1, 1);
-    const m = new THREE.MeshBasicMaterial({ visible: false }); // Görünmez!
-    const dummy = new THREE.Mesh(goster, m);
+    const dummy = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), dummyMat);
     dummy.position.set(x, y, z);
     dummy.userData = { isBlock: true, pos: { x, y, z }, tip };
     blockGroup.add(dummy);
   }
-  
-  meshParcalari.forEach(m => { m.geometry.dispose(); m.material.dispose(); });
+
+  // Görünür mesh - sadece dış yüzler
+  let posArray = [], idxArray = [], colArray = [];
+  let offset = 0;
+  for (const key in world) {
+    const [x, y, z] = key.split(',').map(Number);
+    const tip = world[key];
+    const renk = BLOK_TIPLERI[tip]?.color || 0x888888;
+    const r = ((renk >> 16) & 0xFF) / 255;
+    const g = ((renk >> 8) & 0xFF) / 255;
+    const b = (renk & 0xFF) / 255;
+
+    // 6 yüz - sadece dışarı bakanları çiz
+    const komsular = [
+      [1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]
+    ];
+    const yuzNormals = [
+      [1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]
+    ];
+    const yuzVertices = [
+      // sağ, sol, üst, alt, ön, arka
+      [[0.5,-0.5,0.5],[0.5,-0.5,-0.5],[0.5,0.5,-0.5],[0.5,0.5,0.5]],
+      [[-0.5,-0.5,-0.5],[-0.5,-0.5,0.5],[-0.5,0.5,0.5],[-0.5,0.5,-0.5]],
+      [[-0.5,0.5,0.5],[0.5,0.5,0.5],[0.5,0.5,-0.5],[-0.5,0.5,-0.5]],
+      [[-0.5,-0.5,-0.5],[0.5,-0.5,-0.5],[0.5,-0.5,0.5],[-0.5,-0.5,0.5]],
+      [[-0.5,-0.5,0.5],[0.5,-0.5,0.5],[0.5,0.5,0.5],[-0.5,0.5,0.5]],
+      [[0.5,-0.5,-0.5],[-0.5,-0.5,-0.5],[-0.5,0.5,-0.5],[0.5,0.5,-0.5]]
+    ];
+
+    for (let f = 0; f < 6; f++) {
+      const [dx, dy, dz] = komsular[f];
+      if (blokVarMi(x+dx, y+dy, z+dz)) continue; // Komşu varsa bu yüzü çizme
+
+      const verts = yuzVertices[f];
+      const n = yuzNormals[f];
+      const vPos = [
+        [x+verts[0][0], y+verts[0][1], z+verts[0][2]],
+        [x+verts[1][0], y+verts[1][1], z+verts[1][2]],
+        [x+verts[2][0], y+verts[2][1], z+verts[2][2]],
+        [x+verts[3][0], y+verts[3][1], z+verts[3][2]]
+      ];
+
+      vPos.forEach(p => { posArray.push(...p); colArray.push(r, g, b); });
+      idxArray.push(offset, offset+1, offset+2, offset, offset+2, offset+3);
+      offset += 4;
+    }
+  }
+
+  if (posArray.length > 0) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(posArray, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colArray, 3));
+    geo.setIndex(idxArray);
+    geo.computeVertexNormals();
+
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.userData.isDunya = true;
+    blockGroup.add(mesh);
+  }
 }
 
 function blokGizliMi(x, y, z) {
-  // 6 yönün hepsinde blok varsa bu blok içte = çizilmesine gerek yok
   return blokVarMi(x+1,y,z) && blokVarMi(x-1,y,z) && blokVarMi(x,y+1,z) && blokVarMi(x,y-1,z) && blokVarMi(x,y,z+1) && blokVarMi(x,y,z-1);
 }
 
 function blokEkle(x, y, z, tip) {
-  const key = `${x},${y},${z}`;
-  world[key] = tip;
-  // Görünür dummy mesh ekle (raycast için)
-  const geo = new THREE.BoxGeometry(1, 1, 1);
-  const mat = new THREE.MeshBasicMaterial({ visible: false });
-  const dummy = new THREE.Mesh(geo, mat);
-  dummy.position.set(x, y, z);
-  dummy.userData = { isBlock: true, pos: { x, y, z }, tip };
-  blockGroup.add(dummy);
-  dunyaMeshOlustur(); // Ana mesh'i yeniden oluştur
+  world[`${x},${y},${z}`] = tip;
+  dunyaMeshOlustur();
 }
 
 function blokSil(x, y, z) {
   const key = `${x},${y},${z}`;
   if (world[key] === undefined) return false;
   delete world[key];
-  // Dummy mesh'leri temizle (yeniden oluşturulacak)
-  while(blockGroup.children.length > 0) {
-    const child = blockGroup.children[0];
-    blockGroup.remove(child);
-    if (child.geometry) child.geometry.dispose();
-    if (child.material) child.material.dispose();
-  }
-  dunyaMeshOlustur(); // Ana mesh'i yeniden oluştur
+  dunyaMeshOlustur();
   return true;
 }
 
@@ -333,8 +340,7 @@ function karakterCarpiyorMu(x, y, z) {
     for (let oz = -1; oz <= 1; oz++)
       for (let oy = 0; oy <= 1; oy++) {
         if (!blokVarMi(bx+ox, by+oy, bz+oz)) continue;
-        const blkX = bx+ox, blkY = by+oy, blkZ = bz+oz;
-        if (x+0.3 > blkX-0.5 && x-0.3 < blkX+0.5 && y+0.8 > blkY-0.5 && y-0.5 < blkY+0.5 && z+0.3 > blkZ-0.5 && z-0.3 < blkZ+0.5) return true;
+        if (x+0.3>bx+ox-0.5 && x-0.3<bx+ox+0.5 && y+0.8>by+oy-0.5 && y-0.5<by+oy+0.5 && z+0.3>bz+oz-0.5 && z-0.3<bz+oz+0.5) return true;
       }
   return false;
 }
@@ -351,9 +357,7 @@ function setupMouse() {
   document.addEventListener('pointerlockchange', () => { pointerLocked = document.pointerLockElement === canvas; });
   document.addEventListener('mousemove', (e) => {
     if (!pointerLocked || isMobile) return;
-    playerRotY -= e.movementX * 0.002;
-    playerRotX -= e.movementY * 0.002;
-    playerRotX = Math.max(-1.2, Math.min(1.2, playerRotX));
+    playerRotY -= e.movementX * 0.003;
   });
   canvas.addEventListener('mousedown', (e) => { if (e.button === 0 && pointerLocked) blokKirYap(); });
   canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); if (pointerLocked) blokKoyYap(); });
@@ -398,7 +402,7 @@ function blokKoyYap() {
     if (!hit.object.userData?.isBlock) continue;
     const p = hit.object.userData.pos, n = hit.face.normal;
     const nx = p.x+Math.round(n.x), ny = p.y+Math.round(n.y), nz = p.z+Math.round(n.z);
-    const px = Math.floor(camera.position.x), py = Math.floor(camera.position.y), pz = Math.floor(camera.position.z);
+    const px = Math.floor(kedi.position.x), py = Math.floor(kedi.position.y), pz = Math.floor(kedi.position.z);
     if (nx === px && (ny === py || ny === py+1) && nz === pz) return;
     if (blokVarMi(nx, ny, nz)) return;
     blokEkle(nx, ny, nz, seciliBlok); return;
@@ -422,31 +426,51 @@ function loop() {
   
   const fwd = new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0), playerRotY);
   const rgt = new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0), playerRotY);
-  const hiz = 0.035;
-  const mx = fwd.x*hz + rgt.x*hx, mz = fwd.z*hz + rgt.z*hx, ys = camera.position.y;
+  const hiz = 0.04;
+  let mx = fwd.x*hz + rgt.x*hx, mz = fwd.z*hz + rgt.z*hx;
   
-  if (mx !== 0) { const xn = camera.position.x+mx*hiz; if (!karakterCarpiyorMu(xn, ys, camera.position.z)) camera.position.x = xn; }
-  if (mz !== 0) { const zn = camera.position.z+mz*hiz; if (!karakterCarpiyorMu(camera.position.x, ys, zn)) camera.position.z = zn; }
+  const kx = kedi.position.x, ky = kedi.position.y, kz = kedi.position.z;
   
-  if (altindaBlokVarMi(camera.position.x, camera.position.y, camera.position.z) && yGravity <= 0) {
+  if (mx !== 0) { const xn = kx+mx*hiz; if (!karakterCarpiyorMu(xn, ky, kz)) kedi.position.x = xn; }
+  if (mz !== 0) { const zn = kz+mz*hiz; if (!karakterCarpiyorMu(kedi.position.x, ky, zn)) kedi.position.z = zn; }
+  
+  // Kediyi hareket yönüne çevir
+  if (mx !== 0 || mz !== 0) {
+    const hedefAci = Math.atan2(-mx, -mz);
+    kedi.rotation.y = hedefAci;
+  }
+  
+  // Fizik
+  if (altindaBlokVarMi(kedi.position.x, kedi.position.y, kedi.position.z) && yGravity <= 0) {
     yerde = true; yGravity = 0;
-    if (ziplamayaHazir && (keys[' '] || zipliyor)) { yGravity = 0.20; yerde = false; ziplamayaHazir = false; }
+    if (ziplamayaHazir && (keys[' '] || zipliyor)) {
+      yGravity = 0.32; // YÜKSEK ZIPLAMA!
+      yerde = false; ziplamayaHazir = false;
+    }
   } else {
-    yerde = false; yGravity -= 0.02;
-    if (yGravity < -0.25) yGravity = -0.25;
-    const yn = camera.position.y + yGravity;
-    if (!karakterCarpiyorMu(camera.position.x, yn, camera.position.z)) camera.position.y = yn;
-    else if (yGravity < 0) { camera.position.y = Math.floor(camera.position.y)+0.6; yGravity = 0; yerde = true; }
+    yerde = false; yGravity -= 0.025;
+    if (yGravity < -0.3) yGravity = -0.3;
+    const yn = kedi.position.y + yGravity;
+    if (!karakterCarpiyorMu(kedi.position.x, yn, kedi.position.z)) kedi.position.y = yn;
+    else if (yGravity < 0) { kedi.position.y = Math.floor(kedi.position.y)+0.35; yGravity = 0; yerde = true; }
     else yGravity = 0;
   }
   
-  if (camera.position.y < -20) {
+  if (kedi.position.y < -20) {
     let ey = 2;
     for (let x=-2;x<=2;x++) for (let z=-2;z<=2;z++) for (let y=10;y>=0;y--) if (blokVarMi(x,y,z)) { ey=Math.max(ey,y); break; }
-    camera.position.set(0, ey+2, 0); yGravity = -0.01; yerde = false;
+    kedi.position.set(0, ey+2, 6); yGravity = -0.01; yerde = false;
   }
   
-  camera.quaternion.setFromEuler(new THREE.Euler(playerRotX, playerRotY, 0, 'YXZ'));
-  document.getElementById('koordinat').textContent = `${Math.round(camera.position.x)}, ${Math.floor(camera.position.y)}, ${Math.round(camera.position.z)}`;
+  // 3. ŞAHIS KAMERA - kedinin arkasından
+  const kameraMesafe = 5;
+  const kameraYukseklik = 3;
+  const kameraX = kedi.position.x - Math.sin(playerRotY) * kameraMesafe;
+  const kameraZ = kedi.position.z - Math.cos(playerRotY) * kameraMesafe;
+  camera.position.set(kameraX, kedi.position.y + kameraYukseklik, kameraZ);
+  camera.lookAt(kedi.position.x, kedi.position.y + 1, kedi.position.z);
+  
+  document.getElementById('koordinat').textContent = 
+    `Kedi: ${Math.round(kedi.position.x)}, ${Math.floor(kedi.position.y)}, ${Math.round(kedi.position.z)}`;
   renderer.render(scene, camera);
 }
