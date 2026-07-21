@@ -354,8 +354,8 @@ function loop() {
       
       // Zıplama (ziplamayaHazir kontrolü ile - basılı tutunca 1 kere)
       if (ziplamayaHazir && (keys[' '] || zipliyor)) {
-        // YAVAŞ ZIPLAMA: 0.18 (eskiden 0.28'di)
-        yGravity = 0.18;
+        // MC TARZI ZIPLAMA: 0.20 kuvvet, 0.02 gravity
+        yGravity = 0.20;
         yerde = false;
         ziplamayaHazir = false;
       }
@@ -363,8 +363,8 @@ function loop() {
       // Havada veya çukurda - yerçekimi
       yerde = false;
       
-      // DAHA YAVAŞ YERÇEKİMİ: 0.006 (eskiden 0.015'ti) -> havada uzun kalma
-      yGravity -= 0.006;
+      // MC TARZI GRAVITY: 0.02 (havada kısa süre, doğal his)
+      yGravity -= 0.02;
       
       // Maksimum düşüş hızı sınırı
       if (yGravity < -0.25) yGravity = -0.25;
