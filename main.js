@@ -134,7 +134,9 @@ function kediOlustur() {
     grup.add(cizgi);
   }
 
-  grup.position.y = 0.35;
+  // Kediyi küçült (0.6 ölçek)
+  grup.scale.set(0.6, 0.6, 0.6);
+  grup.position.y = 0.25;
   grup.castShadow = true;
   return grup;
 }
@@ -340,7 +342,7 @@ function karakterCarpiyorMu(x, y, z) {
     for (let oz = -1; oz <= 1; oz++)
       for (let oy = 0; oy <= 1; oy++) {
         if (!blokVarMi(bx+ox, by+oy, bz+oz)) continue;
-        if (x+0.3>bx+ox-0.5 && x-0.3<bx+ox+0.5 && y+0.8>by+oy-0.5 && y-0.5<by+oy+0.5 && z+0.3>bz+oz-0.5 && z-0.3<bz+oz+0.5) return true;
+        if (x+0.2>bx+ox-0.5 && x-0.2<bx+ox+0.5 && y+0.5>by+oy-0.5 && y-0.2<by+oy+0.5 && z+0.2>bz+oz-0.5 && z-0.2<bz+oz+0.5) return true;
       }
   return false;
 }
@@ -449,7 +451,7 @@ function loop() {
     if (yGravity < -0.3) yGravity = -0.3;
     const yn = kedi.position.y + yGravity;
     if (!karakterCarpiyorMu(kedi.position.x, yn, kedi.position.z)) kedi.position.y = yn;
-    else if (yGravity < 0) { kedi.position.y = Math.floor(kedi.position.y)+0.35; yGravity = 0; yerde = true; }
+    else if (yGravity < 0) { kedi.position.y = Math.floor(kedi.position.y)+0.25; yGravity = 0; yerde = true; }
     else yGravity = 0;
   }
   
